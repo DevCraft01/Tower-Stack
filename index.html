@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Urban Tower Constructor</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+        
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #0c0c0c;
+            font-family: 'Orbitron', sans-serif;
+            overflow: hidden;
+            color: #e0e0e0;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 500px;
+            height: 600px;
+            overflow: hidden;
+            border: 2px solid #333;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+            border-radius: 5px;
+        }
+
+        #gameCanvas {
+            background-color: transparent;
+            display: block;
+        }
+
+        #scoreContainer {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #00ffff;
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.7);
+        }
+
+        #gameOverContainer {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(10, 10, 10, 0.9);
+            padding: 30px;
+            border-radius: 5px;
+            text-align: center;
+            color: #e0e0e0;
+            display: none;
+            border: 1px solid #00ffff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+            width: 300px;
+        }
+
+        #restartButton {
+            margin-top: 20px;
+            padding: 12px 25px;
+            background-color: transparent;
+            color: #00ffff;
+            border: 1px solid #00ffff;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 16px;
+            font-family: 'Orbitron', sans-serif;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        #restartButton:hover {
+            background-color: rgba(0, 255, 255, 0.2);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+        }
+
+        #startButton {
+            padding: 15px 30px;
+            background-color: transparent;
+            color: #00ffff;
+            border: 1px solid #00ffff;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 18px;
+            font-family: 'Orbitron', sans-serif;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        #startButton:hover {
+            background-color: rgba(0, 255, 255, 0.2);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+        }
+
+        #startScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(10, 10, 10, 0.9);
+            z-index: 10;
+        }
+
+        .title {
+            color: #00ffff;
+            font-size: 36px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.7);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        .instructions {
+            color: #e0e0e0;
+            font-size: 14px;
+            margin-bottom: 30px;
+            text-align: center;
+            max-width: 400px;
+            line-height: 1.5;
+        }
+        
+        .perfect-text {
+            position: absolute;
+            color: #00ffff;
+            font-size: 16px;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.7);
+            animation: fadeOut 1s forwards;
+        }
+        
+        @keyframes fadeOut {
+            0% { opacity: 1; }
+            100% { opacity: 0; transform: translateY(-20px); }
+        }
+        
+        .level-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: #00ffff;
+            font-size: 16px;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.7);
+        }
+        
+        .combo-indicator {
+            position: absolute;
+            top: 50px;
+            right: 20px;
+            color: #ff00ff;
+            font-size: 16px;
+            text-shadow: 0 0 10px rgba(255, 0, 255, 0.7);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        <div id="scoreContainer">SCORE: 0</div>
+        <div id="levelIndicator" class="level-indicator">LEVEL: 1</div>
+        <div id="comboIndicator" class="combo-indicator">COMBO: 0</div>
+        <div id="gameOverContainer">
+            <h2>CONSTRUCTION FAILED</h2>
+            <div id="finalScore">SCORE: 0</div>
+            <button id="restartButton">REBUILD</button>
+        </div>
+        <div id="startScreen">
+            <div class="title">URBAN TOWER</div>
+            <div class="instructions">
+                Construct the ultimate skyscraper in this precision-based architecture challenge. 
+                Timing is critical—place each level with exact precision to maintain structural integrity.
+            </div>
+            <button id="startButton">INITIATE</button>
+        </div>
+    </div>
+
+    <script>
+        // Game variables
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('scoreContainer');
+        const finalScoreElement = document.getElementById('finalScore');
+        const gameOverContainer = document.getElementById('gameOverContainer');
+        const restartButton = document.getElementById('restartButton');
+        const startButton = document.getElementById('startButton');
+        const startScreen = document.getElementById('startScreen');
+        const levelIndicator = document.getElementById('levelIndicator');
+        const comboIndicator = document.getElementById('comboIndicator');
+
+        // Set canvas dimensions
+        canvas.width = 500;
+        canvas.height = 600;
+
+        // Game state
+        let gameActive = false;
+        let score = 0;
+        let blockSpeed = 2;
+        let blockDirection = 1;
+        let blockWidth = 150;
+        let blockHeight = 25;
+        let currentBlockX = 0;
+        let currentBlockY = 0;
+        let blocks = [];
+        let groundLevel = canvas.height - 50;
+        let cameraOffset = 0;
+        let perfectPlacement = 0;
+        let level = 1;
+        let comboTimer = null;
+        
+        // Create gradient for background
+        const backgroundGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        backgroundGradient.addColorStop(0, '#000000');
+        backgroundGradient.addColorStop(1, '#0f0f30');
+        
+        // Create grid pattern
+        const gridPattern = document.createElement('canvas');
+        gridPattern.width = 50;
+        gridPattern.height = 50;
+        const gridCtx = gridPattern.getContext('2d');
+        gridCtx.strokeStyle = 'rgba(0, 255, 255, 0.1)';
+        gridCtx.lineWidth = 1;
+        gridCtx.beginPath();
+        gridCtx.moveTo(0, 0);
+        gridCtx.lineTo(50, 0);
+        gridCtx.lineTo(50, 50);
+        gridCtx.lineTo(0, 50);
+        gridCtx.closePath();
+        gridCtx.stroke();
+        
+        // Create city skyline
+        const skylineCanvas = document.createElement('canvas');
+        skylineCanvas.width = canvas.width;
+        skylineCanvas.height = 100;
+        const skylineCtx = skylineCanvas.getContext('2d');
+        createSkyline(skylineCtx, skylineCanvas.width, skylineCanvas.height);
+        
+        function createSkyline(ctx, width, height) {
+            ctx.fillStyle = '#111';
+            
+            // Create random buildings
+            for (let x = 0; x < width; x += Math.random() * 20 + 10) {
+                const buildingWidth = Math.random() * 30 + 15;
+                const buildingHeight = Math.random() * 60 + 20;
+                ctx.fillRect(x, height - buildingHeight, buildingWidth, buildingHeight);
+                
+                // Add windows
+                ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+                for (let wx = x + 3; wx < x + buildingWidth - 3; wx += 5) {
+                    for (let wy = height - buildingHeight + 5; wy < height - 5; wy += 8) {
+                        if (Math.random() > 0.3) {
+                            ctx.fillRect(wx, wy, 3, 3);
+                        }
+                    }
+                }
+                ctx.fillStyle = '#111';
+            }
+        }
+        
+        // Create stars
+        const stars = [];
+        for (let i = 0; i < 100; i++) {
+            stars.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * (canvas.height - 100),
+                size: Math.random() * 1.5 + 0.5,
+                opacity: Math.random() * 0.8 + 0.2,
+                pulse: Math.random() * 0.02 + 0.01
+            });
+        }
+        
+        // Colors for blocks - cyberpunk neon theme
+        const blockColors = [
+            { fill: '#0099ff', stroke: '#00ccff', glow: 'rgba(0, 153, 255, 0.7)' },
+            { fill: '#ff00cc', stroke: '#ff33ff', glow: 'rgba(255, 0, 204, 0.7)' },
+            { fill: '#00ff99', stroke: '#33ffcc', glow: 'rgba(0, 255, 153, 0.7)' },
+            { fill: '#ff6600', stroke: '#ff9933', glow: 'rgba(255, 102, 0, 0.7)' },
+            { fill: '#9900ff', stroke: '#cc33ff', glow: 'rgba(153, 0, 255, 0.7)' }
+        ];
+        
+        // Initialize game
+        function initGame() {
+            // Reset game state
+            gameActive = true;
+            score = 0;
+            blockSpeed = 2;
+            blockWidth = 150;
+            blockHeight = 25;
+            currentBlockX = Math.floor(canvas.width / 2) - Math.floor(blockWidth / 2);
+            currentBlockY = groundLevel - blockHeight;
+            blocks = [];
+            cameraOffset = 0;
+            perfectPlacement = 0;
+            level = 1;
+            
+            // Hide game over screen
+            gameOverContainer.style.display = 'none';
+            
+            // Update score display
+            updateScore();
+            updateLevel();
+            
+            // Start game loop
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Game loop
+        function gameLoop() {
+            if (!gameActive) return;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw background
+            drawBackground();
+            
+            // Move current block
+            moveCurrentBlock();
+            
+            // Draw blocks
+            drawBlocks();
+            
+            // Draw current block
+            drawCurrentBlock();
+            
+            // Draw ground
+            drawGround();
+            
+            // Continue game loop
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Draw background
+        function drawBackground() {
+            // Fill with gradient
+            ctx.fillStyle = backgroundGradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw stars with pulsing effect
+            ctx.fillStyle = '#ffffff';
+            stars.forEach(star => {
+                star.opacity += star.pulse;
+                if (star.opacity > 1 || star.opacity < 0.2) {
+                    star.pulse *= -1;
+                }
+                ctx.globalAlpha = star.opacity;
+                ctx.beginPath();
+                ctx.arc(star.x, star.y - cameraOffset * 0.1, star.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+            
+            // Draw grid pattern
+            ctx.fillStyle = ctx.createPattern(gridPattern, 'repeat');
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw skyline
+            const skylineY = groundLevel - skylineCanvas.height + 30;
+            if (skylineY + skylineCanvas.height - cameraOffset > 0 && skylineY - cameraOffset < canvas.height) {
+                ctx.drawImage(skylineCanvas, 0, skylineY - cameraOffset);
+            }
+            
+            // Draw distant horizontal lines to simulate a cyber grid
+            ctx.strokeStyle = 'rgba(0, 255, 255, 0.15)';
+            ctx.lineWidth = 1;
+            for (let y = 0; y < canvas.height; y += 50) {
+                const adjustedY = (y - cameraOffset * 0.5) % canvas.height;
+                ctx.beginPath();
+                ctx.moveTo(0, adjustedY);
+                ctx.lineTo(canvas.width, adjustedY);
+                ctx.stroke();
+            }
+        }
+        
+        // Draw ground
+        function drawGround() {
+            // Draw ground platform with neon effect
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, groundLevel - cameraOffset, canvas.width, 50);
+            
+            // Neon top line
+            ctx.strokeStyle = '#00ffff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, groundLevel - cameraOffset);
+            ctx.lineTo(canvas.width, groundLevel - cameraOffset);
+            ctx.stroke();
+            
+            // Glow effect
+            ctx.shadowColor = '#00ffff';
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.moveTo(0, groundLevel - cameraOffset);
+            ctx.lineTo(canvas.width, groundLevel - cameraOffset);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+        }
+        
+        // Move current block
+        function moveCurrentBlock() {
+            currentBlockX += blockSpeed * blockDirection;
+            
+            // Reverse direction when hitting edges
+            if (currentBlockX <= 0 || currentBlockX + blockWidth >= canvas.width) {
+                blockDirection *= -1;
+            }
+        }
+        
+        // Draw blocks
+        function drawBlocks() {
+            blocks.forEach((block, index) => {
+                const colorIndex = index % blockColors.length;
+                const blockColor = blockColors[colorIndex];
+                
+                // Draw main block
+                ctx.fillStyle = blockColor.fill;
+                ctx.strokeStyle = blockColor.stroke;
+                ctx.lineWidth = 2;
+                ctx.fillRect(block.x, block.y - cameraOffset, block.width, block.height);
+                ctx.strokeRect(block.x, block.y - cameraOffset, block.width, block.height);
+                
+                // Add glow effect
+                ctx.shadowColor = blockColor.glow;
+                ctx.shadowBlur = 15;
+                ctx.strokeRect(block.x, block.y - cameraOffset, block.width, block.height);
+                ctx.shadowBlur = 0;
+                
+                // Add circuit-like details
+                drawCircuitDetails(block.x, block.y - cameraOffset, block.width, block.height);
+            });
+        }
+        
+        // Draw circuit details on blocks
+        function drawCircuitDetails(x, y, width, height) {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.lineWidth = 1;
+            
+            // Draw horizontal line across middle
+            ctx.beginPath();
+            ctx.moveTo(x + 5, y + height / 2);
+            ctx.lineTo(x + width - 5, y + height / 2);
+            ctx.stroke();
+            
+            // Draw some vertical connections
+            const segments = Math.floor(width / 20);
+            for (let i = 1; i < segments; i++) {
+                if (Math.random() > 0.5) {
+                    const segX = x + (width / segments) * i;
+                    ctx.beginPath();
+                    ctx.moveTo(segX, y + height / 2);
+                    ctx.lineTo(segX, Math.random() > 0.5 ? y + 5 : y + height - 5);
+                    ctx.stroke();
+                    
+                    // Add small circle nodes
+                    if (Math.random() > 0.7) {
+                        ctx.fillStyle = '#ffffff';
+                        ctx.beginPath();
+                        ctx.arc(segX, y + height / 2, 2, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            }
+        }
+        
+        // Draw current block
+        function drawCurrentBlock() {
+            const colorIndex = blocks.length % blockColors.length;
+            const blockColor = blockColors[colorIndex];
+            
+            // Draw block with pulsating effect to indicate it's active
+            const pulseAmount = Math.sin(Date.now() / 200) * 0.2 + 0.8;
+            
+            // Glow effect
+            ctx.shadowColor = blockColor.glow;
+            ctx.shadowBlur = 15 * pulseAmount;
+            
+            // Main block
+            ctx.fillStyle = blockColor.fill;
+            ctx.strokeStyle = blockColor.stroke;
+            ctx.lineWidth = 2;
+            ctx.fillRect(currentBlockX, currentBlockY - cameraOffset, blockWidth, blockHeight);
+            ctx.strokeRect(currentBlockX, currentBlockY - cameraOffset, blockWidth, blockHeight);
+            ctx.shadowBlur = 0;
+            
+            // Add circuit details
+            drawCircuitDetails(currentBlockX, currentBlockY - cameraOffset, blockWidth, blockHeight);
+            
+            // Draw target indicator
+            if (blocks.length > 0) {
+                const previousBlock = blocks[blocks.length - 1];
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(previousBlock.x, previousBlock.y - cameraOffset);
+                ctx.lineTo(previousBlock.x, currentBlockY - cameraOffset + blockHeight);
+                ctx.stroke();
+                ctx.moveTo(previousBlock.x + previousBlock.width, previousBlock.y - cameraOffset);
+                ctx.lineTo(previousBlock.x + previousBlock.width, currentBlockY - cameraOffset + blockHeight);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        }
+        
+        // Place block
+        function placeBlock() {
+            if (!gameActive) return;
+            
+            if (blocks.length === 0) {
+                // First block gets placed where it is
+                blocks.push({
+                    x: currentBlockX,
+                    y: currentBlockY,
+                    width: blockWidth,
+                    height: blockHeight
+                });
+                
+                // Add effect
+                addBlockEffect(currentBlockX, currentBlockY, blockWidth);
+            } else {
+                // Get the previous block
+                const previousBlock = blocks[blocks.length - 1];
+                
+                // Calculate overlap with previous block
+                const leftEdge = Math.max(currentBlockX, previousBlock.x);
+                const rightEdge = Math.min(currentBlockX + blockWidth, previousBlock.x + previousBlock.width);
+                const overlapWidth = rightEdge - leftEdge;
+                
+                if (overlapWidth <= 0) {
+                    // Game over if no overlap
+                    gameOver();
+                    return;
+                }
+                
+                // Calculate accuracy as a percentage
+                const maxPossibleOverlap = Math.min(blockWidth, previousBlock.width);
+                const accuracyPercentage = (overlapWidth / maxPossibleOverlap) * 100;
+                
+                // Perfect placement bonus
+                if (accuracyPercentage > 95) {
+                    perfectPlacement++;
+                    showPerfectText(leftEdge, currentBlockY);
+                    
+                    // After 3 perfect placements, get a perfect block
+                    if (perfectPlacement >= 3) {
+                        perfectPlacement = 0;
+                        blocks.push({
+                            x: previousBlock.x,
+                            y: currentBlockY,
+                            width: previousBlock.width,
+                            height: blockHeight
+                        });
+                        
+                        // Add visual effect for perfect placement
+                        showComboText();
+                        addPerfectEffect(previousBlock.x, currentBlockY, previousBlock.width);
+                    } else {
+                        // Just a normal placement with a small perfect bonus
+                        blocks.push({
+                            x: leftEdge,
+                            y: currentBlockY,
+                            width: overlapWidth,
+                            height: blockHeight
+                        });
+                        
+                        // Add effect
+                        addBlockEffect(leftEdge, currentBlockY, overlapWidth);
+                    }
+                } else {
+                    // Reset perfect counter
+                    perfectPlacement = 0;
+                    
+                    // Regular placement - only the overlapping part
+                    blocks.push({
+                        x: leftEdge,
+                        y: currentBlockY,
+                        width: overlapWidth,
+                        height: blockHeight
+                    });
+                    
+                    // Add effect
+                    addBlockEffect(leftEdge, currentBlockY, overlapWidth);
+                }
+                
+                // Update current block width for next placement
+                blockWidth = overlapWidth;
+            }
+            
+            // Increase score
+            score++;
+            updateScore();
+            
+            // Check for level up
+            if (score % 10 === 0) {
+                levelUp();
+            }
+            
+            // Increase difficulty
+            blockSpeed += 0.2;
+            
+            // Move up for next block
+            currentBlockY -= blockHeight;
+            
+            // Reset current block position
+            currentBlockX = Math.floor(Math.random() * (canvas.width - blockWidth));
+            
+            // If tower is getting too high, move camera
+            if (currentBlockY - cameraOffset < canvas.height / 3) {
+                cameraOffset = currentBlockY - canvas.height / 3;
+            }
+        }
+        
+        // Add block placement effect
+        function addBlockEffect(x, y, width) {
+            // Create particles
+            for (let i = 0; i < 10; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.position = 'absolute';
+                particle.style.left = (x + Math.random() * width) + 'px';
+                particle.style.top = (y - cameraOffset + blockHeight / 2) + 'px';
+                particle.style.width = '3px';
+                particle.style.height = '3px';
+                particle.style.backgroundColor = '#00ffff';
+                particle.style.borderRadius = '50%';
+                particle.style.boxShadow = '0 0 5px #00ffff';
+                particle.style.opacity = '1';
+                particle.style.transition = 'all 0.5s';
+                
+                document.body.appendChild(particle);
+                
+                setTimeout(() => {
+                    particle.style.transform = `translate(${(Math.random() - 0.5) * 50}px, ${-Math.random() * 50}px)`;
+                    particle.style.opacity = '0';
+                }, 10);
+                
+                setTimeout(() => {
+                    document.body.removeChild(particle);
+                }, 500);
+            }
+        }
+        
+        // Show perfect text animation
+        function showPerfectText(x, y) {
+            const perfectText = document.createElement('div');
+            perfectText.className = 'perfect-text';
+            perfectText.textContent = 'PERFECT';
+            perfectText.style.left = (x + 10) + 'px';
+            perfectText.style.top = (y - cameraOffset - 20) + 'px';
+            
+            document.getElementById('gameContainer').appendChild(perfectText);
+            
+            setTimeout(() => {
+                document.getElementById('gameContainer').removeChild(perfectText);
+            }, 1000);
+        }
+        
+        // Show combo text
+        function showComboText() {
+            comboIndicator.textContent = 'COMBO x3!';
+            comboIndicator.style.opacity = '1';
+            
+            if (comboTimer) clearTimeout(comboTimer);
+            
+            comboTimer = setTimeout(() => {
+                comboIndicator.style.opacity = '0';
+            }, 2000);
+        }
+        
+        // Add perfect placement effect
+        function addPerfectEffect(x, y, width) {
+            // Create a horizontal laser beam effect
+            const beam = document.createElement('div');
+            beam.style.position = 'absolute';
+            beam.style.left = x + 'px';
+            beam.style.top = (y - cameraOffset) + 'px';
+            beam.style.width = width + 'px';
+            beam.style.height = '2px';
+            beam.style.backgroundColor = '#ffffff';
+            beam.style.boxShadow = '0 0 10px #00ffff, 0 0 20px #00ffff';
+            beam.style.opacity = '1';
+            beam.style.transition = 'all 0.5s';
+            
+            document.body.appendChild(beam);
+            
+            setTimeout(() => {
+                beam.style.height = '30px';
+                beam.style.opacity = '0';
+            }, 10);
+            
+            setTimeout(() => {
+                document.body.removeChild(beam);
+            }, 500);
+        }
+        
+        // Level up
+        function levelUp() {
+            level++;
+            updateLevel();
+            
+            // Visual effect for level up
+            const levelUpText = document.createElement('div');
+            levelUpText.style.position = 'absolute';
+            levelUpText.style.top = '50%';
+            levelUpText.style.left = '50%';
+            levelUpText.style.transform = 'translate(-50%, -50%)';
+            levelUpText.style.color = '#00ffff';
+            levelUpText.style.fontSize = '30px';
+            levelUpText.style.fontWeight = 'bold';
+            levelUpText.style.textShadow = '0 0 10px rgba(0, 255, 255, 0.7)';
+            levelUpText.style.zIndex = '100';
+            levelUpText.style.fontFamily = "'Orbitron', sans-serif";
+            levelUpText.textContent = 'LEVEL UP!';
+            levelUpText.style.opacity = '0';
+            levelUpText.style.transition = 'all 0.5s';
+            
+            document.getElementById('gameContainer').appendChild(levelUpText);
+            
+            setTimeout(() => {
+                levelUpText.style.opacity = '1';
+            }, 10);
+            
+            setTimeout(() => {
+                levelUpText.style.opacity = '0';
+            }, 1500);
+            
+            setTimeout(() => {
+                document.getElementById('gameContainer').removeChild(levelUpText);
+            }, 2000);
+        }
+        
+        // Update level display
+        function updateLevel() {
+            levelIndicator.textContent = `LEVEL: ${level}`;
+        }
+        
+        // Update score display
+        function updateScore() {
+            scoreElement.textContent = `SCORE: ${score}`;
+        }
+        
+        // Game over
+        function gameOver() {
+            gameActive = false;
+            finalScoreElement.textContent = `SCORE: ${score}`;
+            gameOverContainer.style.display = 'block';
+            
+            // Add game over effect - screen shake
+            const gameContainer = document.getElementById('gameContainer');
+            gameContainer.style.transition = 'none';
+            
+            let shakeCount = 0;
+            const maxShakes = 5;
+            const shakeInterval = setInterval(() => {
+                if (shakeCount >= maxShakes) {
+                    clearInterval(shakeInterval);
+                    gameContainer.style.transform = 'translate(0, 0)';
+                    gameContainer.style.transition = 'all 0.3s';
+                    return;
+                }
+                
+                const xOffset = (Math.random() - 0.5) * 10;
+                const yOffset = (Math.random() - 0.5) * 10;
+                gameContainer.style.transform = `translate(${xOffset}px, ${yOffset}px)`;
+                shakeCount++;
+            }, 50);
+        }
+        
+        // Event listeners
+        canvas.addEventListener('click', placeBlock);
+        canvas.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            placeBlock();
+        });
+        
+        restartButton.addEventListener('click', initGame);
+        
+        startButton.addEventListener('click', function() {
+            startScreen.style.display = 'none';
+            initGame();
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            // Keep the game centered
+            // Note: This does not resize the canvas to avoid complications
+        });
+    </script>
+</body>
+</html>
